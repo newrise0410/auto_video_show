@@ -1,0 +1,66 @@
+# 세로 쇼츠 (유튜브 Shorts / 릴스 / 틱톡)
+name: shorts
+width: 1080
+height: 1920
+fps: 30
+
+# 내레이션을 쓰면 이건 고정값이 아니라 **대본 작성용 목표치**다.
+# 실제 클립 길이는 합성된 목소리 길이가 정한다(2-pass).
+scene_duration: 8.0
+max_scene_duration: 15.0   # Grok Imagine 상한
+min_scenes: 5
+max_scenes: 8
+
+# 세로를 네이티브로 요청한다. 가로로 받아 크롭하면 화면 절반을 버리게 된다.
+aspect_ratio: "9:16"
+source_resolution: 720p  # xAI 상한. 캔버스로는 정규화 단계에서 업스케일한다.
+
+# 8초 × 4.0 = 32자. 필요하면 narration_max_chars 로 직접 덮어쓴다.
+chars_per_second: 4.0
+
+fit: cover
+
+# Grok 클립에는 장면에 맞는 환경음이 딸려온다.
+# keep = 그대로 살린다 / mute = 무음으로 갈아끼운다
+source_audio: keep
+
+# 로컬 TTS 내레이션. backend: none 으로 두면 예전처럼 씬 길이가 고정되고
+# 목소리는 Vrew 몫이 된다.
+narration:
+  backend: local
+  model: supertonic       # 베이크오프 결과 (docs/spike-local-tts.md)
+  voice: F1               # M1~M5 / F1~F5
+  reference_audio: null   # Supertonic은 Voice Builder 스타일 JSON 경로를 받는다
+  speed: 1.0
+  language: null          # null = 멀티링구얼(na). 한국어에 영어가 섞여도 그대로 처리
+  head_pad: 0.35
+  tail_pad: 0.5
+
+# 내레이션이 있을 때 환경음 처리.
+# duck = 말할 때만 눌러준다 / attenuate = 고정 감쇠 / mute = 버린다
+ambient: duck
+ambient_gain_db: -18.0
+
+# 최종 라우드니스 (LUFS). 유튜브 기준 -14. null 이면 손대지 않는다.
+loudness_target: -14.0
+
+transition: none
+transition_duration: 0.4
+
+crf: 20
+preset: medium
+
+subtitles:
+  font_name: Malgun Gothic
+  font_size: 64
+  bold: true
+  outline: 4
+  alignment: 2
+  # 하단 UI(좋아요/댓글 버튼)에 가리지 않도록 충분히 띄운다.
+  margin_v: 380
+
+style_notes: |
+  - 첫 씬 1.5초 안에 시청자를 붙잡는 훅으로 시작한다.
+  - 한 씬은 한 가지만 말한다. 문장을 겹치지 않는다.
+  - 마지막 씬은 다음 행동을 유도하는 한 문장으로 닫는다.
+  - 영상 프롬프트는 세로 구도를 전제로 하고, 피사체를 화면 중앙에 둔다.

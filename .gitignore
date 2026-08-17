@@ -1,0 +1,8 @@
+runs/
+.venv/
+.venv-tts/
+__pycache__/
+*.pyc
+.pytest_cache/
+uv.lock
+.env

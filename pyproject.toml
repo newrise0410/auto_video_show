@@ -1,0 +1,30 @@
+[project]
+name = "auto-video-show"
+version = "0.1.0"
+description = "주제 하나로 쇼츠/롱폼 영상을 뽑아내는 로컬 자동화 파이프라인"
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.15",
+    "pydantic>=2.9",
+    "rich>=13.9",
+    "httpx>=0.28",
+    "PyYAML>=6.0",
+]
+
+[project.scripts]
+avs = "avs.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["avs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

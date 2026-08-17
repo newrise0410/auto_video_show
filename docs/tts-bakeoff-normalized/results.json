@@ -1,0 +1,108 @@
+[
+  {
+    "model": "supertonic",
+    "ok": true,
+    "error": "",
+    "probe": {
+      "success": true,
+      "model": "supertonic",
+      "version": "1.3.1",
+      "device": "cpu (onnxruntime)",
+      "languages": [
+        "en",
+        "ko",
+        "ja",
+        "ar",
+        "bg",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "es",
+        "et",
+        "fi",
+        "fr",
+        "hi",
+        "hr",
+        "hu",
+        "id",
+        "it",
+        "lt",
+        "lv",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
+        "sl",
+        "sv",
+        "tr",
+        "uk",
+        "vi",
+        "na"
+      ],
+      "voices": [
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5"
+      ],
+      "supports_cloning": false,
+      "license": "code MIT / weights OpenRAIL-M"
+    },
+    "clips": [
+      {
+        "name": "codeswitch",
+        "text": "이 API를 쓰면 핸드드립보다 세 배 빠릅니다.",
+        "path": "docs\\tts-bakeoff-normalized\\supertonic\\01_codeswitch.wav",
+        "duration": 3.778,
+        "synth_seconds": 0.984,
+        "success": true,
+        "error": ""
+      },
+      {
+        "name": "numbers",
+        "text": "물 온도는 92도, 원두 대 물 비율은 1 대 15가 기본값입니다.",
+        "path": "docs\\tts-bakeoff-normalized\\supertonic\\02_numbers.wav",
+        "duration": 6.001,
+        "synth_seconds": 0.969,
+        "success": true,
+        "error": ""
+      },
+      {
+        "name": "proper_noun",
+        "text": "GitHub Actions에서 CI를 돌리듯이 매일 자동으로 실행됩니다.",
+        "path": "docs\\tts-bakeoff-normalized\\supertonic\\03_proper_noun.wav",
+        "duration": 5.192,
+        "synth_seconds": 0.938,
+        "success": true,
+        "error": ""
+      },
+      {
+        "name": "range",
+        "text": "30초에서 1분 정도 식히면 90도 초반까지 떨어집니다.",
+        "path": "docs\\tts-bakeoff-normalized\\supertonic\\04_range.wav",
+        "duration": 5.627,
+        "synth_seconds": 1.047,
+        "success": true,
+        "error": ""
+      },
+      {
+        "name": "plain",
+        "text": "원두를 바꿔도 커피가 쓰다면 원인은 대개 추출에 있습니다.",
+        "path": "docs\\tts-bakeoff-normalized\\supertonic\\05_plain.wav",
+        "duration": 5.307,
+        "synth_seconds": 0.906,
+        "success": true,
+        "error": ""
+      }
+    ]
+  }
+]

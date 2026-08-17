@@ -1,0 +1,40 @@
+# 로컬 TTS 베이크오프 결과
+
+같은 문장을 후보 모델마다 합성한 결과. **wav를 직접 듣고** 판정한다.
+여기 있는 수치는 속도 기준(합격 조건 3번)만 답해준다.
+
+## 합격 기준
+
+1. 영어 토큰을 자연스러운 영어 발음으로 읽는가
+2. 숫자·단위를 한국어 어법대로 읽는가 (「세 배」, 「구십이 도」, 「일 대 십오」)
+3. 8초 분량 합성이 10초 이내인가
+4. 라이선스가 수익화를 허용하는가
+
+## 후보
+
+| 모델 | 상태 | 라이선스 | 클로닝 | 디바이스 | 로딩 |
+|---|---|---|---|---|---|
+| supertonic | OK | code MIT / weights OpenRAIL-M | 불가 | cpu (onnxruntime) | 0.9초 |
+
+> `load` 는 모델을 메모리에 올리는 시간이다. 배치로 합성하므로 실행당 한 번만 든다.
+> `RTF`(realtime factor)는 합성시간/오디오길이 — 1보다 작으면 실시간보다 빠르다.
+
+## 문장별 결과
+
+### supertonic
+
+| 문장 | 길이 | 합성 | RTF | 파일 |
+|---|---|---|---|---|
+| codeswitch | 3.78초 | 0.98초 | 0.26 | [01_codeswitch.wav](supertonic/01_codeswitch.wav) |
+| numbers | 6.00초 | 0.97초 | 0.16 | [02_numbers.wav](supertonic/02_numbers.wav) |
+| proper_noun | 5.19초 | 0.94초 | 0.18 | [03_proper_noun.wav](supertonic/03_proper_noun.wav) |
+| range | 5.63초 | 1.05초 | 0.19 | [04_range.wav](supertonic/04_range.wav) |
+| plain | 5.31초 | 0.91초 | 0.17 | [05_plain.wav](supertonic/05_plain.wav) |
+
+## 평가 문장
+
+- **codeswitch** — 이 API를 쓰면 핸드드립보다 세 배 빠릅니다.
+- **numbers** — 물 온도는 92도, 원두 대 물 비율은 1 대 15가 기본값입니다.
+- **proper_noun** — GitHub Actions에서 CI를 돌리듯이 매일 자동으로 실행됩니다.
+- **range** — 30초에서 1분 정도 식히면 90도 초반까지 떨어집니다.
+- **plain** — 원두를 바꿔도 커피가 쓰다면 원인은 대개 추출에 있습니다.

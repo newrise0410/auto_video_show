@@ -1,0 +1,58 @@
+# 가로 롱폼 (유튜브 본편)
+name: longform
+width: 1920
+height: 1080
+fps: 30
+
+# 길이는 씬 수로 조절한다. max_scenes를 올리면 생성 시간과 비용이
+# 그대로 비례해서 늘어난다 (씬 1개당 대략 60초 이상 소요).
+# 10초 × 30씬 = 약 5분.
+# 내레이션을 쓰면 대본 작성용 목표치다. 실제 길이는 목소리가 정한다.
+scene_duration: 10.0
+max_scene_duration: 15.0
+min_scenes: 18
+max_scenes: 30
+
+aspect_ratio: "16:9"
+source_resolution: 720p
+
+chars_per_second: 4.0
+
+fit: cover
+
+# keep = 클립에 딸려온 환경음을 살린다 / mute = 무음으로 갈아끼운다
+source_audio: keep
+
+narration:
+  backend: local
+  model: supertonic
+  voice: M2               # 롱폼은 남성 톤이 덜 피곤하다. 취향대로 바꿀 것
+  reference_audio: null
+  speed: 1.0
+  language: null
+  head_pad: 0.4
+  tail_pad: 0.6
+
+ambient: duck
+ambient_gain_db: -18.0
+loudness_target: -14.0
+
+transition: xfade
+transition_duration: 0.5
+
+crf: 19
+preset: medium
+
+subtitles:
+  font_name: Malgun Gothic
+  font_size: 44
+  bold: true
+  outline: 3
+  alignment: 2
+  margin_v: 70
+
+style_notes: |
+  - 도입 → 본론 3~4개 챕터 → 정리 순서로 구성한다.
+  - 챕터가 바뀌는 씬은 내레이션 첫머리에서 전환을 분명히 알린다.
+  - 같은 소재를 다른 각도로 반복해 설명하되 문장은 재사용하지 않는다.
+  - 영상 프롬프트는 가로 와이드 구도를 전제로 하고, 카메라 움직임을 명시한다.
