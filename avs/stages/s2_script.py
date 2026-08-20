@@ -1,14 +1,26 @@
 """s2 — 구성안을 씬 단위 대본으로.
 
-씬 하나의 길이가 고정이므로 내레이션 길이도 상한이 있다. 모델이 이 상한을
-자주 넘기기 때문에, 검증에서 걸러 문제 목록을 붙여 다시 요청한다.
+검증은 두 종류다.
+
+**하드 검사**(길이·씬 개수·`video_prompt`)는 대본을 못 쓰게 만드는 문제라
+`script=None` 으로 반려한다. 내레이션 길이에는 상한과 하한이 둘 다 있다 —
+상한만 걸어두면 모델이 예산의 절반만 쓰고, 2-pass에서는 그게 곧 영상 길이가
+반토막 나는 결과가 된다.
+
+**문체 검사**(`avs/quality.py`)는 고치면 좋은 문제지 못 쓸 이유가 아니다.
+대본과 지적을 함께 돌려주고, 마지막 시도에서는 경고만 남기고 받아들인다.
+문체 때문에 36씬짜리 실행이 죽으면 안 된다.
 """
 
 from __future__ import annotations
 
+import json
+
 from ..backends import get_llm_backend
+from ..console import warn
+from ..quality import STYLE_MIN_SCENES, style_problems
 from ..models import Profile, Scene, Script
-from ..prompts import script_retry_user, script_system, script_user
+from ..prompts import narration_floor, script_retry_user, script_system, script_user
 from ..state import Run
 from ..textutil import extract_json_object
 
@@ -68,6 +80,18 @@ def validate(data: dict, profile: Profile, scene_count: int) -> tuple[Script | N
             )
         )
 
+    # 하한은 씬별이 아니라 평균에 건다. 짧고 강한 한 줄은 정당한 연출이고,
+    # 실제로 관측된 실패는 개별 씬이 아니라 대본 전체가 눌리는 형태였다.
+    if scenes and not problems:
+        floor = narration_floor(limit)
+        average = sum(len(s.narration) for s in scenes) / len(scenes)
+        if average < floor:
+            problems.append(
+                f"내레이션이 평균 {average:.0f}자입니다. 상한 {limit}자의 절반도 "
+                f"쓰지 않으면 영상이 그만큼 짧아지고 구성안 내용이 사라집니다. "
+                f"평균 {floor}자 이상이 되도록 각 씬을 더 충실하게 쓰세요."
+            )
+
     if problems:
         return None, problems
 
@@ -78,6 +102,12 @@ def validate(data: dict, profile: Profile, scene_count: int) -> tuple[Script | N
         hashtags=hashtags,
         scenes=scenes,
     )
+
+    # 여기서부터는 문체 지적이다. script 를 함께 돌려주는 것이 계약의 핵심 —
+    # 호출부는 `script is None` 으로 '못 씀'을, `problems` 로 '고치면 좋음'을
+    # 구분한다. 씬이 적으면 비율이 통계가 아니라 잡음이라 재지 않는다.
+    if len(scenes) >= STYLE_MIN_SCENES:
+        return script, style_problems([s.narration for s in scenes])
     return script, []
 
 
@@ -93,28 +123,52 @@ def run_stage(run: Run, *, scene_count: int | None = None) -> Script:
     with run.stage("s2") as state:
         message = script_user(topic, outline, count)
         problems: list[str] = []
-        script: Script | None = None
+        previous: str | None = None
+
+        # 하드 검사를 통과한 마지막 대본과 그때 남아 있던 문체 지적을 함께 들고
+        # 간다. 재시도 중 JSON 파싱이 깨져도 앞서 받아둔 멀쩡한 대본을 잃지
+        # 않고, 파싱 오류를 문체 경고로 잘못 보고하지도 않는다.
+        best: Script | None = None
+        best_problems: list[str] = []
 
         for attempt in range(1, MAX_ATTEMPTS + 1):
             raw = llm.complete(message, system=system, timeout=900)
+            script: Script | None = None
             try:
                 data = extract_json_object(raw)
             except ValueError as exc:
-                problems = [str(exc)]
+                problems, previous = [str(exc)], None
             else:
+                # 파싱된 쪽을 다시 직렬화한다. 코드펜스와 군말이 공짜로 벗겨진다.
+                previous = json.dumps(data, ensure_ascii=False)
                 script, problems = validate(data, profile, count)
 
             if script is not None:
-                state.outputs["attempts"] = str(attempt)
-                break
+                best, best_problems = script, problems
+                if not problems:
+                    state.outputs["attempts"] = str(attempt)
+                    break
 
-            if attempt == MAX_ATTEMPTS:
+            if attempt < MAX_ATTEMPTS:
+                message = script_retry_user(topic, outline, count, previous, problems)
+                continue
+
+            if best is None:
                 raise RuntimeError(
                     f"{MAX_ATTEMPTS}번 시도했지만 대본이 규칙을 만족하지 못했습니다:\n"
                     + "\n".join(f"- {p}" for p in problems)
                 )
-            message = script_retry_user(problems)
 
+            # 하드 검사는 통과했고 문체 지적만 남았다. 세 번 시도했으면
+            # 받아들이고 무엇이 남았는지만 기록한다 — 문체 때문에 36씬짜리
+            # 실행이 죽으면 안 된다.
+            state.outputs["attempts"] = str(attempt)
+            state.outputs["style_warnings"] = " / ".join(best_problems)
+            warn("문체 지적이 남았지만 대본을 그대로 씁니다:")
+            for p in best_problems:
+                warn(f"  {p}")
+
+        script = best
         assert script is not None
         run.write_script(script)
         state.outputs["script"] = str(run.paths.script)

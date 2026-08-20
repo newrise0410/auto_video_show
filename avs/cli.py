@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -10,6 +11,14 @@ from rich.table import Table
 
 from . import config
 from .console import console, fail, info, ok, step, warn
+from .quality import (
+    CONNECTIVE_RATIO_MIN,
+    FORMAL_RATIO_MAX,
+    FORMAL_RUN_MAX,
+    Report,
+    measure,
+    proper_nouns,
+)
 from .state import STAGE_LABELS, STAGE_ORDER, Run, list_runs, stages_from
 from .stages import (
     s1_ideate,
@@ -194,6 +203,116 @@ def tts_bakeoff_cmd(
     )
     if not results:
         raise typer.Exit(code=1)
+
+
+def _lint_rows(r: Report) -> list[tuple[str, str, str]]:
+    """(항목, 값, 판정) — 판정은 게이트가 아니라 눈길을 끌기 위한 표시다."""
+    def mark(bad: bool) -> str:
+        return "[red]![/]" if bad else "[green]·[/]"
+
+    mix = " ".join(f"{k} {v}" for k, v in r.ending_mix.most_common())
+    return [
+        ("씬 / 문장 / 글자", f"{r.scenes} / {r.sentence_count} / {r.chars}", ""),
+        ("합쇼체 비율", f"{r.formal_ratio:.0%}", mark(r.formal_ratio > FORMAL_RATIO_MAX)),
+        ("합쇼체 연속 최장", str(r.formal_run_max), mark(r.formal_run_max > FORMAL_RUN_MAX)),
+        ("인접 문장 동일 어미", f"{r.adjacent_same:.0%}", mark(r.adjacent_same > 0.5)),
+        ("어미 분포", mix, ""),
+        (
+            "접속으로 여는 씬",
+            f"{r.connective_scenes}/{max(r.scenes - 1, 0)} = {r.connective_ratio:.0%}",
+            mark(r.connective_ratio < CONNECTIVE_RATIO_MIN),
+        ),
+        ("단문(15자 이하)", f"{r.short_ratio:.0%}", ""),
+        ("문장 길이 최소/중앙/최대", f"{r.len_min} / {r.len_med} / {r.len_max}", ""),
+        ("문두 주어 반복", f"{r.subject_ratio:.0%}", ""),
+        ("나레이터 상투구", str(len(r.tics)), mark(bool(r.tics))),
+        ("씬 내 시제 혼용", str(len(r.mixed_tense_scenes)), ""),
+        (
+            "추정 길이 / 최장 씬",
+            f"{r.est_seconds:.0f}초 / {r.longest_scene_index}번 {r.longest_scene_seconds:.1f}초",
+            "",
+        ),
+    ]
+
+
+def _read_narrations(path: Path) -> list[str]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return [str(s.get("narration") or "") for s in data.get("scenes") or []]
+
+
+@app.command()
+def lint(
+    run_id: RunIdArg = None,
+    file: Annotated[
+        Path | None, typer.Option("--file", help="실행 밖의 대본 JSON을 직접 잽니다.")
+    ] = None,
+    before: Annotated[
+        Path | None,
+        typer.Option("--before", help="비교 대상 대본 JSON. 주면 전후를 나란히 놓습니다."),
+    ] = None,
+) -> None:
+    """대본의 문체를 재서 보여줍니다.
+
+    수치는 한 방향 증거입니다. 나쁘면 확실히 나쁘고, 좋다고 좋은 대본이라는
+    뜻은 아닙니다. 최종 판정은 소리 내어 읽어보는 것입니다.
+    """
+    if file is not None:
+        target, label = file, file.name
+    else:
+        run = _load(run_id)
+        target, label = run.paths.script, run.id
+
+    if not target.is_file():
+        fail(f"대본이 없습니다: {target}")
+        raise typer.Exit(code=1)
+
+    texts = _read_narrations(target)
+    if not texts:
+        fail(f"씬이 없습니다: {target}")
+        raise typer.Exit(code=1)
+    report = measure(texts)
+
+    old_report = None
+    if before is not None:
+        if not before.is_file():
+            fail(f"비교 대상이 없습니다: {before}")
+            raise typer.Exit(code=1)
+        old_report = measure(_read_narrations(before))
+
+    table = Table(show_header=True, header_style="bold", title=label)
+    table.add_column("항목")
+    if old_report is not None:
+        table.add_column(before.name, justify="right")
+    table.add_column("값", justify="right")
+    table.add_column("", width=1)
+
+    rows = _lint_rows(report)
+    old_rows = _lint_rows(old_report) if old_report is not None else None
+    for i, (name, value, flag) in enumerate(rows):
+        if old_rows is not None:
+            table.add_row(name, f"[dim]{old_rows[i][1]}[/]", value, flag)
+        else:
+            table.add_row(name, value, flag)
+    console.print(table)
+
+    if report.tics:
+        warn(f"나레이터 상투구: {', '.join(sorted(set(report.tics)))}")
+    if report.diction:
+        warn("분야가 어긋난 낱말 (탐지일 뿐, 문맥에 따라 옳을 수 있음):")
+        for word, alt, n in report.diction:
+            info(f"{word} ({n}회) → {alt}")
+    if report.mixed_tense_scenes:
+        info(f"씬 안에서 시제가 섞인 씬: {report.mixed_tense_scenes}")
+
+    if old_report is not None:
+        gained = proper_nouns(" ".join(texts)) - proper_nouns(
+            " ".join(_read_narrations(before))
+        )
+        if gained:
+            warn(f"이전 대본에 없던 고유명사 후보: {', '.join(sorted(gained))}")
+            info("사실이 바뀌지 않았는지 눈으로 확인하세요.")
+
+    info("수치는 한 방향 증거입니다. 최종 판정은 소리 내어 읽어보는 것입니다.")
 
 
 @app.command(name="list")

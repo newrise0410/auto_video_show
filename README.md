@@ -76,7 +76,12 @@ uv run avs narrate <run_id> --only 3        # 특정 씬 목소리만 다시
 uv run avs clips <run_id> --only 3,7        # 마음에 안 드는 씬만 다시 생성
 uv run avs run --resume <run_id> --from s4  # 조립부터 다시
 uv run avs list                             # 실행 기록
+uv run avs lint <run_id>                    # 대본 문체 측정
 ```
+
+`lint` 는 파이프라인을 돌리지 않는다. `--file` 로 아무 대본 JSON이나 잴 수 있고,
+`--before` 로 전후를 나란히 놓는다. 수치는 **한 방향 증거**다 — 나쁘면 확실히
+나쁘지만, 좋다고 좋은 대본이라는 뜻은 아니다. 최종 판정은 소리 내어 읽는 것이다.
 
 모든 단계는 멱등이다. 이미 받아둔 클립은 절대 다시 만들지 않는다. 클립 하나에
 1~4분씩 걸리기 때문에 이게 이 도구의 핵심 성질이다.
@@ -97,7 +102,7 @@ uv run avs profiles
 | 캔버스 | 1080x1920 (9:16) | 1920x1080 (16:9) |
 | 씬 목표 길이 | 8초 | 10초 |
 | 씬 수 | 5~8 | 18~30 |
-| 내레이션 상한 | 32자 | 40자 |
+| 내레이션 상한 | 64자 | 80자 |
 | 보이스 | F1 | M2 |
 | 전환 | 없음 | xfade 0.5초 |
 
@@ -129,7 +134,9 @@ avs/
   state.py        실행 매니페스트, 단계 상태, 재개 로직
   models.py       Profile / Scene / Script / RunManifest
   prompts.py      s1·s2 프롬프트
+  quality.py      대본 문체 계측 (avs lint)
   profiles/       출력 규격 YAML
+  data/           낱말 사전 (탐지용)
   stages/         s1·s2·narrate·s3~s6
   backends/       claude / codex / mock, hermes(Grok) / mock, 로컬 TTS
   tts/            브리지 러너 · 모델 어댑터 · 텍스트 정규화 · 베이크오프
@@ -159,6 +166,11 @@ TTS와 Grok은 둘 다 **별도 파이썬 프로세스를 통한 브리지**로 
   덤으로 클립 요청 길이가 짧아져서 **Grok 생성 비용도 같이 줄어든다** — 고정 8초로
   뽑던 것이 내레이션 3초짜리 씬에서는 4초 요청이 된다.
 - **음성 클로닝은 아직 안 된다.** Supertonic은 프리셋 보이스만 제공한다.
+- Supertonic에는 **프로소디 손잡이가 없다** — 속도·피치·휴지를 못 만진다. 낭독이
+  어떻게 들릴지를 정하는 유일한 레버는 **텍스트 자체**다. 그래서 대본 문체를
+  `avs lint` 로 잰다 ([대본 전달력](docs/spike-script-quality.md)).
+- 대본이 어색하면 **s2가 아니라 s1을 의심할 것.** 구성안의 낱말이 그대로 낭독된다.
+  실측에서 어색한 표현 여섯 개가 전부 구성안에서 태어났다.
 - Vrew는 GUI 전용이라 자동화에 넣지 않았다. 이제 목소리까지 파이프라인이 만들므로
   Vrew는 선택 사항이다.
 
@@ -167,6 +179,7 @@ TTS와 Grok은 둘 다 **별도 파이썬 프로세스를 통한 브리지**로 
 
 조사 기록: [고도화 로드맵](docs/roadmap.md) · [Grok 연동](docs/spike-hermes-video-gen.md) ·
 [로컬 TTS 선정](docs/spike-local-tts.md) · [TTS 환경 구축](docs/tts-setup.md) ·
+[대본 전달력](docs/spike-script-quality.md) ·
 [Grok 리서치 원문](docs/research/grok-2026-08-17.md)
 
 ## 테스트
