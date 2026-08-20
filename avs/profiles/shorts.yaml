@@ -15,8 +15,11 @@ max_scenes: 8
 aspect_ratio: "9:16"
 source_resolution: 720p  # xAI 상한. 캔버스로는 정규화 단계에서 업스케일한다.
 
-# 8초 × 4.0 = 32자. 필요하면 narration_max_chars 로 직접 덮어쓴다.
-chars_per_second: 4.0
+# Supertonic 한국어 실측값이다. 156자를 19.3초에 읽었다(8.07자/초).
+# 4.0으로 잡으면 상한이 실제의 절반이 되어, 64초 분량으로 기획된 구성안이
+# 32초 그릇에 눌려 들어간다. 씬마다 고유명사가 잘려 나가는 원인이었다.
+# 8초 × 8.0 = 64자. 필요하면 narration_max_chars 로 직접 덮어쓴다.
+chars_per_second: 8.0
 
 fit: cover
 

@@ -1,0 +1,67 @@
+# 가로 롱폼 — 함축하지 않는 버전.
+#
+# 내장 longform 과 다른 점은 두 가지뿐이다: 씬이 길고, 씬 수가 많다.
+# 이야기가 긴 주제(서사시·역사·사건 재구성)에서 내장 longform 을 쓰면
+# 씬당 80자 안에 사건을 밀어 넣느라 연결어미가 잘리고 관형절이 겹친다.
+# 그러면 낭독했을 때 한국어가 부자연스러워진다.
+name: longform-deep
+width: 1920
+height: 1080
+fps: 30
+
+# 12초 × 8.0 = 96자. 씬 하나에 문장 두세 개가 들어가는 분량이다.
+#
+# 상한을 더 올리지 않는 이유: Grok Imagine 클립이 15초까지만 나온다.
+# 96자는 실측 8.07자/초로 약 11.9초, 앞뒤 여백 1.0초를 더해도 12.9초라
+# 15초 안에 들어간다. 여기서 더 키우면 말이 클립보다 길어져 뒤가 잘린다.
+scene_duration: 12.0
+max_scene_duration: 15.0
+
+# 분량은 씬 수가 정한다. 36씬이면 약 6~7.5분.
+# 씬 1개당 클립 생성에 1~4분이 걸린다는 점을 감안할 것.
+min_scenes: 24
+max_scenes: 36
+
+aspect_ratio: "16:9"
+source_resolution: 720p
+
+chars_per_second: 8.0
+
+fit: cover
+source_audio: keep
+
+narration:
+  backend: local
+  model: supertonic
+  voice: M2
+  reference_audio: null
+  speed: 1.0
+  language: null
+  head_pad: 0.4
+  tail_pad: 0.6
+
+ambient: duck
+ambient_gain_db: -18.0
+loudness_target: -14.0
+
+transition: xfade
+transition_duration: 0.5
+
+crf: 19
+preset: medium
+
+subtitles:
+  font_name: Malgun Gothic
+  font_size: 44
+  bold: true
+  outline: 3
+  alignment: 2
+  margin_v: 70
+
+style_notes: |
+  - 도입 → 본론 3~4개 챕터 → 정리 순서로 구성한다.
+  - 챕터가 바뀌는 씬은 내레이션 첫머리에서 전환을 분명히 알린다.
+  - 사건을 요약하지 말고 장면으로 보여준다. 누가 무엇을 했고 그래서 무엇이
+    달라졌는지를 문장으로 풀어 쓴다.
+  - 씬 하나에 사건 하나. 여러 사건을 한 씬에 묶어 이름만 나열하지 않는다.
+  - 영상 프롬프트는 가로 와이드 구도를 전제로 하고, 카메라 움직임을 명시한다.

@@ -16,7 +16,9 @@ max_scenes: 30
 aspect_ratio: "16:9"
 source_resolution: 720p
 
-chars_per_second: 4.0
+# Supertonic 한국어 실측 8.07자/초 (shorts.yaml 주석 참고).
+# 10초 × 8.0 = 80자.
+chars_per_second: 8.0
 
 fit: cover
 

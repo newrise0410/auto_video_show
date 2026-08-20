@@ -76,6 +76,25 @@ def plan_scene_length(run: Run, scene: Scene) -> tuple[int, float]:
     return max(1, round(seconds)), float(seconds)
 
 
+def _refresh_targets(run: Run, scenes) -> None:
+    """이미 받아둔 클립의 타임라인 목표 길이를 현재 내레이션에 맞춘다.
+
+    클립 자체는 건드리지 않는다. 새 내레이션이 기존 클립보다 길면 s4가
+    "내레이션 끝이 잘릴 수 있습니다" 로 경고하므로, 여기서 조용히 깎지
+    않고 그대로 넘긴다 — 사람이 대본을 줄이거나 클립을 다시 뽑아야 한다.
+    """
+    changed = 0
+    for scene in scenes:
+        _, target = plan_scene_length(run, scene)
+        artifact = run.manifest.scene_artifact(scene.index)
+        if artifact.target_seconds is None or abs(artifact.target_seconds - target) > 0.01:
+            artifact.target_seconds = target
+            changed += 1
+    if changed:
+        run.save()
+        info(f"내레이션이 바뀐 씬 {changed}개의 목표 길이를 다시 잡았습니다")
+
+
 def _generate_one(
     run: Run, scene: Scene, backend, lock: threading.Lock, gate: SubmitGate
 ) -> None:
@@ -173,6 +192,15 @@ def run_stage(
     pending = [s for s in targets if _needs_generation(run, s, force=force)]
     if skipped := len(targets) - len(pending):
         info(f"이미 받아둔 클립 {skipped}개는 건너뜁니다")
+
+    # 재사용하는 클립도 타임라인 목표 길이는 다시 계산한다.
+    #
+    # 목표 길이를 정하는 건 생성 경로(_generate_one)뿐인데, 대본을 고쳐
+    # 내레이션만 다시 합성하면 그 경로를 타지 않는다. 그러면 s4가 예전
+    # 길이로 잘라 붙여 씬 꼬리에 빈 시간이 남는다. 내레이션 재사용은 이
+    # 도구의 핵심 동선이므로(문장이 바뀐 씬만 다시 합성된다) 여기서 맞춘다.
+    pending_indexes = {s.index for s in pending}
+    _refresh_targets(run, [s for s in targets if s.index not in pending_indexes])
 
     # 일부 씬만 다시 만드는 경우, 스테이지 자체를 실패로 몰면 안 된다.
     # 손대지 않은 다른 씬이 아직 없는 건 정상적인 중간 상태다.
